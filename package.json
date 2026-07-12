@@ -1,0 +1,28 @@
+{
+  "name": "username-score",
+  "version": "1.0.0",
+  "description": "An open-source, deterministic username scoring engine for TypeScript.",
+  "main": "packages/src/index.ts",
+  "type": "module",
+  "scripts": {
+    "dev": "tsx --watch packages/src/index.ts",
+    "test": "vitest"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/ebenezereugene/username-score.git"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "bugs": {
+    "url": "https://github.com/ebenezereugene/username-score/issues"
+  },
+  "homepage": "https://github.com/ebenezereugene/username-score#readme",
+  "devDependencies": {
+    "@types/node": "^26.1.1",
+    "tsx": "^4.23.0",
+    "typescript": "^7.0.2",
+    "vitest": "^4.1.10"
+  }
+}
