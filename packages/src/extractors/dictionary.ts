@@ -7,38 +7,13 @@ import {
   DICTIONARY_SOURCES,
   MAX_DICTIONARY_WORD_LENGTH,
 } from "../dictionaries/index.dictionaries.js";
+
 import { decodeLeetspeak } from "../normalizers/leetspeak.js";
 
-export interface DictionaryMatch {
-  word: string;
-  source: string;
-  start: number;
-  end: number;
-}
-
-export interface DictionaryMetadata {
-  matches: DictionaryMatch[];
-
-  matchedWordCount: number;
-
-  distinctWordCount: number;
-
-  coverageRatio: number;
-
-  longestMatchLength: number;
-
-  sourceCounts: Record<string, number>;
-
-  unmatchedFragments: string[];
-
-  hasNameMatch: boolean;
-
-  hasCommonWordMatch: boolean;
-
-  hasAbbreviationMatch: boolean;
-
-  recognizabilityScore: number;
-}
+import type {
+  DictionaryMatch,
+  DictionaryMetadata,
+} from "./types.dictionary.js";
 
 const MIN_MATCH_LENGTH = 3;
 
@@ -127,6 +102,7 @@ function extractUnmatchedFragments(
       buffer += text[i];
     } else if (buffer) {
       fragments.push(buffer);
+
       buffer = "";
     }
   }
@@ -147,19 +123,30 @@ export const dictionaryExtractor: Extractor<DictionaryMetadata> = {
     if (!text) {
       return {
         name: this.name,
+
         value: 0,
 
         metadata: {
           matches: [],
+
           matchedWordCount: 0,
+
           distinctWordCount: 0,
+
           coverageRatio: 0,
+
           longestMatchLength: 0,
+
           sourceCounts: {},
+
           unmatchedFragments: [],
+
           hasNameMatch: false,
+
           hasCommonWordMatch: false,
+
           hasAbbreviationMatch: false,
+
           recognizabilityScore: 0,
         } satisfies DictionaryMetadata,
       };
@@ -167,16 +154,6 @@ export const dictionaryExtractor: Extractor<DictionaryMetadata> = {
 
     const matches: DictionaryMatch[] = [];
 
-    /**
-     * Split into alphabetic segments.
-     *
-     * john123smith
-     *
-     * becomes:
-     *
-     * john
-     * smith
-     */
     for (const segmentMatch of text.matchAll(/[a-z]+/g)) {
       const segment = segmentMatch[0];
 
@@ -261,3 +238,18 @@ export const dictionaryExtractor: Extractor<DictionaryMetadata> = {
     };
   },
 };
+
+/**
+ * Convenience function.
+ *
+ * Allows:
+ *
+ * extractDictionary(parsed)
+ *
+ * while keeping the extractor object architecture.
+ */
+export function extractDictionary(
+  username: Parameters<typeof dictionaryExtractor.extract>[0],
+) {
+  return dictionaryExtractor.extract(username);
+}
