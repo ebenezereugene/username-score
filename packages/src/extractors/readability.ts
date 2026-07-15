@@ -11,6 +11,7 @@ import {
   COMMON_PHONETIC_TRANSITIONS,
   NATURAL_TRANSITIONS,
 } from "../constants/pronunciation.constants.js";
+import { decodeLeetspeak } from "../normalizers/leetspeak.js";
 import { isDigit, isLetter, isSymbol } from "../utils/character.js";
 import type { Extractor } from "./types.js";
 import type {
@@ -22,8 +23,9 @@ export const readabilityExtractor: Extractor<ReadabilityMetadata> = {
   name: "readability",
 
   extract(username) {
-    const text = username.normalized;
-    const totalLength = text.length;
+    const rawText = username.normalized;
+    const decodedText = decodeLeetspeak(rawText);
+    const totalLength = rawText.length;
 
     if (totalLength === 0) {
       return {
@@ -64,11 +66,12 @@ export const readabilityExtractor: Extractor<ReadabilityMetadata> = {
     }
 
     // ----------------------------------------
-    // Character counts
+    // Character counts (decoded text — "bl00d"
+    // is measured as "blood" phonetically)
     // ----------------------------------------
 
-    const vowelCount = (text.match(VOWEL_REGEX) ?? []).length;
-    const consonantCount = (text.match(CONSONANT_REGEX) ?? []).length;
+    const vowelCount = (decodedText.match(VOWEL_REGEX) ?? []).length;
+    const consonantCount = (decodedText.match(CONSONANT_REGEX) ?? []).length;
 
     const letterCount = vowelCount + consonantCount;
 
@@ -76,10 +79,10 @@ export const readabilityExtractor: Extractor<ReadabilityMetadata> = {
     const consonantRatio = letterCount > 0 ? consonantCount / letterCount : 0;
 
     // ----------------------------------------
-    // Consonant clusters
+    // Consonant clusters (decoded text)
     // ----------------------------------------
 
-    const consonantClusters = text.match(CONSONANT_CLUSTER_REGEX) ?? [];
+    const consonantClusters = decodedText.match(CONSONANT_CLUSTER_REGEX) ?? [];
 
     const longestConsonantCluster = consonantClusters.reduce(
       (max, cluster) => Math.max(max, cluster.length),
@@ -87,10 +90,13 @@ export const readabilityExtractor: Extractor<ReadabilityMetadata> = {
     );
 
     // ----------------------------------------
-    // Number clusters
+    // Number clusters (raw text — preserves
+    // detection of bolted-on random digits like
+    // "john38291", which leetspeak-decoding would
+    // otherwise hide)
     // ----------------------------------------
 
-    const numberClusters = text.match(NUMBER_CLUSTER_REGEX) ?? [];
+    const numberClusters = rawText.match(NUMBER_CLUSTER_REGEX) ?? [];
 
     const longestNumberCluster = numberClusters.reduce(
       (max, cluster) => Math.max(max, cluster.length),
@@ -98,10 +104,10 @@ export const readabilityExtractor: Extractor<ReadabilityMetadata> = {
     );
 
     // ----------------------------------------
-    // Symbol runs
+    // Symbol runs (raw text)
     // ----------------------------------------
 
-    const symbolRuns = text.match(SYMBOL_RUN_REGEX) ?? [];
+    const symbolRuns = rawText.match(SYMBOL_RUN_REGEX) ?? [];
 
     const longestSymbolRun = symbolRuns.reduce(
       (max, run) => Math.max(max, run.length),
@@ -109,7 +115,9 @@ export const readabilityExtractor: Extractor<ReadabilityMetadata> = {
     );
 
     // ----------------------------------------
-    // Character transitions
+    // Character transitions (raw text — digit
+    // adjacency needs real digits, not decoded
+    // letters)
     // ----------------------------------------
 
     const transitionCounts: TransitionCounts = {
@@ -121,9 +129,9 @@ export const readabilityExtractor: Extractor<ReadabilityMetadata> = {
       digitToSymbol: 0,
     };
 
-    for (let i = 0; i < text.length - 1; i++) {
-      const current = text.charAt(i);
-      const next = text.charAt(i + 1);
+    for (let i = 0; i < rawText.length - 1; i++) {
+      const current = rawText.charAt(i);
+      const next = rawText.charAt(i + 1);
 
       if (isLetter(current) && isDigit(next)) {
         transitionCounts.letterToDigit++;
@@ -141,18 +149,17 @@ export const readabilityExtractor: Extractor<ReadabilityMetadata> = {
     }
 
     // ----------------------------------------
-    // Natural letter-pair transitions
+    // Natural letter-pair transitions (decoded
+    // text — same logic as pronunciationExtractor's
+    // commonTransitionScore)
     // ----------------------------------------
-    // Same scoring logic as pronunciationExtractor's commonTransitionScore:
-    // full credit for pairs in COMMON_PHONETIC_TRANSITIONS, half credit for
-    // NATURAL_TRANSITIONS, zero for anything else (e.g. "qr", "aq", "qu").
 
     let naturalTransitionScore = 0;
     let totalLetterPairs = 0;
 
-    for (let i = 0; i < text.length - 1; i++) {
-      const first = text.charAt(i);
-      const second = text.charAt(i + 1);
+    for (let i = 0; i < decodedText.length - 1; i++) {
+      const first = decodedText.charAt(i);
+      const second = decodedText.charAt(i + 1);
 
       if (!isLetter(first) || !isLetter(second)) {
         continue;
@@ -175,10 +182,18 @@ export const readabilityExtractor: Extractor<ReadabilityMetadata> = {
         : 1;
 
     // ----------------------------------------
-    // Alphabetic coverage
+    // Alphabetic coverage (raw text, deliberately
+    // NOT decoded — digits still count against
+    // coverage even if leetspeak-decodable, so
+    // "john38291" keeps its low coverage signal)
     // ----------------------------------------
 
-    const alphabeticCoverage = totalLength > 0 ? letterCount / totalLength : 0;
+    const rawLetterCount =
+      (rawText.match(VOWEL_REGEX) ?? []).length +
+      (rawText.match(CONSONANT_REGEX) ?? []).length;
+
+    const alphabeticCoverage =
+      totalLength > 0 ? rawLetterCount / totalLength : 0;
 
     return {
       name: this.name,

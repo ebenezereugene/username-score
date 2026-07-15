@@ -1,3 +1,5 @@
+//extractors/types.dictionary.ts
+
 export interface DictionaryMatch {
   word: string;
   source: string;

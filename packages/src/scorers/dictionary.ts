@@ -135,8 +135,6 @@ export const dictionaryScorer: Scorer<
       reasons.push("Contains very long word components.");
     }
 
-    score += Math.round((recognizabilityScore - 0.5) * 10);
-
     const finalScore = Math.max(0, Math.min(100, Math.round(score)));
 
     let confidence = 0.75;

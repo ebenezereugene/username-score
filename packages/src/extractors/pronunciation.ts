@@ -8,6 +8,7 @@ import {
   SEPARATORS,
   VOWELS,
 } from "../constants/pronunciation.constants.js";
+import { decodeLeetspeak } from "../normalizers/leetspeak.js";
 import type { Extractor } from "./types.js";
 import type { PronunciationMetadata } from "./types.pronunciation.js";
 
@@ -19,8 +20,9 @@ export const pronunciationExtractor: Extractor<PronunciationMetadata> = {
   name: "pronunciation",
 
   extract(username) {
-    const text = username.normalized;
-    const totalLength = text.length;
+    const rawText = username.normalized;
+    const decodedText = decodeLeetspeak(rawText);
+    const totalLength = rawText.length;
 
     if (totalLength === 0) {
       return {
@@ -44,7 +46,8 @@ export const pronunciationExtractor: Extractor<PronunciationMetadata> = {
     }
 
     // ==========================================
-    // PHASE 1 — Basic Signals
+    // PHASE 1 — Basic Signals (decoded text —
+    // "bl00d" is judged as "blood" phonetically)
     // ==========================================
 
     let vowelCount = 0;
@@ -54,8 +57,8 @@ export const pronunciationExtractor: Extractor<PronunciationMetadata> = {
     const consonantRuns: number[] = [];
     let currentConsonantRun = 0;
 
-    for (let i = 0; i < totalLength; i++) {
-      const char = text.charAt(i);
+    for (let i = 0; i < decodedText.length; i++) {
+      const char = decodedText.charAt(i);
 
       if (VOWELS.has(char)) {
         vowelCount++;
@@ -92,19 +95,21 @@ export const pronunciationExtractor: Extractor<PronunciationMetadata> = {
     const separatorDensity = totalLength > 0 ? separatorCount / totalLength : 0;
 
     // ==========================================
-    // Numbers — evaluate runs
+    // Numbers — evaluate runs (raw text — a
+    // leetspeak-decodable digit is still a digit
+    // for bot-suffix / random-number detection)
     // ==========================================
 
-    const numbersCount = (text.match(/\d/g) ?? []).length;
+    const numbersCount = (rawText.match(/\d/g) ?? []).length;
 
     let numberInterruptions = 0;
 
-    for (const match of text.matchAll(/\d+/g)) {
+    for (const match of rawText.matchAll(/\d+/g)) {
       const start = match.index ?? 0;
       const end = start + match[0].length;
 
-      const before = text[start - 1];
-      const after = text[end];
+      const before = rawText[start - 1];
+      const after = rawText[end];
 
       if (isLetter(before) && isLetter(after)) {
         numberInterruptions++;
@@ -112,16 +117,16 @@ export const pronunciationExtractor: Extractor<PronunciationMetadata> = {
     }
 
     // ==========================================
-    // PHASE 2 — Phonetic Patterns
+    // PHASE 2 — Phonetic Patterns (decoded text)
     // ==========================================
 
     let transitionScore: number = 0;
     let totalLetterPairs = 0;
     let impossibleTransitions = 0;
 
-    for (let i = 0; i < totalLength - 1; i++) {
-      const first = text.charAt(i);
-      const second = text.charAt(i + 1);
+    for (let i = 0; i < decodedText.length - 1; i++) {
+      const first = decodedText.charAt(i);
+      const second = decodedText.charAt(i + 1);
 
       if (!isLetter(first) || !isLetter(second)) {
         continue;
@@ -148,10 +153,10 @@ export const pronunciationExtractor: Extractor<PronunciationMetadata> = {
         : 1;
 
     // ==========================================
-    // Syllable Estimation
+    // Syllable Estimation (decoded text)
     // ==========================================
 
-    const lettersOnly = text.replace(/[^a-z]/gi, "");
+    const lettersOnly = decodedText.replace(/[^a-z]/gi, "");
 
     const vowelGroups = lettersOnly.match(/[aeiouy]+/g) ?? [];
 
