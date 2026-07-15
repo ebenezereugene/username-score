@@ -8,6 +8,7 @@ import { combinePillars } from "./engine/pillars.js";
 import type { ParsedUsername } from "./parser/types.js";
 import type { PillarBreakdown } from "./engine/pillars.js";
 import type { ScorerResult } from "./engine/types.js";
+import { generateUsernameSuggestions } from "./generator/index.js";
 
 export interface ScoreOptions {
   /**
@@ -62,4 +63,10 @@ export function score(
 }
 
 // Example
-console.log(analyze("eugeneebenezer"));
+console.log(analyze("fola"));
+
+// const generatedSuggetions =generateUsernameSuggestions("emmah");
+
+// console.log("generatedSuggetions", generatedSuggetions);
+
+
