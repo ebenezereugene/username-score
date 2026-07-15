@@ -1,41 +1,27 @@
-import { dictionaryExtractor } from "./extractors/dictionary.js";
-import { extractFeatures } from "./extractors/index.extractors.js";
-import { pronunciationExtractor } from "./extractors/pronunciation.js";
-import { readabilityExtractor } from "./extractors/readability.js";
+// index.ts
+
 import { parseUsername } from "./parser/parser.js";
-import { dictionaryScorer } from "./scorers/dictionary.js";
-import { scoreLength } from "./scorers/length.js";
-import { pronunciationScorer } from "./scorers/pronunciation.js";
-import { readabilityScorer } from "./scorers/readability.js";
+import { scoreUsername } from "./pipeline/scoreUsername.js";
+import { score as combineScore } from "./engine/score.js";
 
-const parsed = parseUsername("eugeneebenezer");
+import type { ScoreBreakdown, ScoreWeights } from "./engine/types.js";
 
-const features = extractFeatures(parsed);
+const DEFAULT_WEIGHTS: ScoreWeights = {
+  length: 0.2,
+  dictionary: 0.2,
+  pronunciation: 0.2,
+  entropy: 0.2,
+  readability: 0.2,
+};
 
-// console.log(features);
-const scoreLengthResult = scoreLength(parsed);
-// console.log(scoreLengthResult);
+export function score(
+  username: string,
+  weights: ScoreWeights = DEFAULT_WEIGHTS,
+): ScoreBreakdown {
+  const parsed = parseUsername(username);
+  const results = scoreUsername(parsed);
 
+  return combineScore(results, weights);
+}
 
-const feature = dictionaryExtractor.extract(parsed);
-// console.log("feature:", feature);
-
-const score = dictionaryScorer.score(feature.metadata);
-
-// console.log("dictionary score",score);
-
-
-const pronounciationFeature = pronunciationExtractor.extract(parsed);
-const pronunciationscore = pronunciationScorer.score(pronounciationFeature.metadata);
-
-// console.log("pronunciationScore:", pronunciationscore);
-
-
-
-const readabilityFeature = readabilityExtractor.extract(parsed)
-
-
-
-const readabilityScore = readabilityScorer.score(readabilityFeature.metadata)
-
-console.log("readabilityscore", readabilityScore);
+console.log("this is the score:", score("john"));

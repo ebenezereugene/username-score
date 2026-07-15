@@ -1,3 +1,5 @@
+// constants/readability.constants.ts
+
 export const VOWEL_REGEX = /[aeiou]/g;
 export const CONSONANT_REGEX = /[bcdfghjklmnpqrstvwxyz]/g;
 export const CONSONANT_CLUSTER_REGEX = /[bcdfghjklmnpqrstvwxyz]{2,}/g;

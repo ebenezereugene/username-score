@@ -1,3 +1,5 @@
+// constants/pronunciation.constants.ts
+
 export const VOWELS = new Set(["a", "e", "i", "o", "u", "y"]);
 
 export const CONSONANTS = new Set([

@@ -7,6 +7,10 @@ import {
   SYMBOL_RUN_REGEX,
   VOWEL_REGEX,
 } from "../constants/readability.constants.js";
+import {
+  COMMON_PHONETIC_TRANSITIONS,
+  NATURAL_TRANSITIONS,
+} from "../constants/pronunciation.constants.js";
 import { isDigit, isLetter, isSymbol } from "../utils/character.js";
 import type { Extractor } from "./types.js";
 import type {
@@ -53,6 +57,8 @@ export const readabilityExtractor: Extractor<ReadabilityMetadata> = {
           },
 
           alphabeticCoverage: 0,
+
+          naturalTransitionRatio: 1,
         } satisfies ReadabilityMetadata,
       };
     }
@@ -135,6 +141,40 @@ export const readabilityExtractor: Extractor<ReadabilityMetadata> = {
     }
 
     // ----------------------------------------
+    // Natural letter-pair transitions
+    // ----------------------------------------
+    // Same scoring logic as pronunciationExtractor's commonTransitionScore:
+    // full credit for pairs in COMMON_PHONETIC_TRANSITIONS, half credit for
+    // NATURAL_TRANSITIONS, zero for anything else (e.g. "qr", "aq", "qu").
+
+    let naturalTransitionScore = 0;
+    let totalLetterPairs = 0;
+
+    for (let i = 0; i < text.length - 1; i++) {
+      const first = text.charAt(i);
+      const second = text.charAt(i + 1);
+
+      if (!isLetter(first) || !isLetter(second)) {
+        continue;
+      }
+
+      const pair = `${first}${second}`;
+
+      totalLetterPairs++;
+
+      if (COMMON_PHONETIC_TRANSITIONS.has(pair)) {
+        naturalTransitionScore += 1;
+      } else if (NATURAL_TRANSITIONS.has(pair)) {
+        naturalTransitionScore += 0.5;
+      }
+    }
+
+    const naturalTransitionRatio =
+      totalLetterPairs > 0
+        ? Math.min(1, naturalTransitionScore / totalLetterPairs)
+        : 1;
+
+    // ----------------------------------------
     // Alphabetic coverage
     // ----------------------------------------
 
@@ -164,6 +204,8 @@ export const readabilityExtractor: Extractor<ReadabilityMetadata> = {
         transitionCounts,
 
         alphabeticCoverage,
+
+        naturalTransitionRatio: Math.round(naturalTransitionRatio * 100) / 100,
       } satisfies ReadabilityMetadata,
     };
   },

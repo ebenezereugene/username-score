@@ -11,8 +11,6 @@ import {
 import type { Extractor } from "./types.js";
 import type { PronunciationMetadata } from "./types.pronunciation.js";
 
-
-
 function isLetter(char: string | undefined): boolean {
   return char !== undefined && (VOWELS.has(char) || CONSONANTS.has(char));
 }

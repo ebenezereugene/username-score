@@ -1,3 +1,5 @@
+// scorers/readability.ts
+
 import type { Scorer } from "./types.js";
 import type { ReadabilityMetadata } from "../extractors/types.readability.js";
 import type { ReadabilityScoreMetadata } from "./types.readability.js";
@@ -9,6 +11,7 @@ import {
   HIGH_ALPHABETIC_COVERAGE,
   IDEAL_MAX_VOWEL_RATIO,
   IDEAL_MIN_VOWEL_RATIO,
+  NATURAL_TRANSITION_PENALTY,
   NUMBER_PENALTY,
   SYMBOL_PENALTY,
   TRANSITION_PENALTY,
@@ -24,8 +27,6 @@ function calculateConfidence(metadata: ReadabilityMetadata): number {
     return 0;
   }
 
-  // Confidence increases when we have enough characters
-  // to make a meaningful readability judgment.
   const lengthConfidence = Math.min(metadata.totalLength / 10, 1);
 
   return Number(lengthConfidence.toFixed(2));
@@ -42,8 +43,9 @@ export const readabilityScorer: Scorer<
     // Penalties
     // -----------------------------
 
+    const clusterExcess = Math.max(0, metadata.longestConsonantCluster - 2);
     const consonantClusterPenalty =
-      Math.max(0, metadata.longestConsonantCluster - 2) * CLUSTER_PENALTY;
+      clusterExcess * clusterExcess * CLUSTER_PENALTY;
 
     const numberPenalty =
       metadata.numberClusterCount *
@@ -59,6 +61,9 @@ export const readabilityScorer: Scorer<
 
     const transitionPenalty = totalTransitions * TRANSITION_PENALTY;
 
+    const naturalTransitionPenalty =
+      (1 - metadata.naturalTransitionRatio) * NATURAL_TRANSITION_PENALTY;
+
     // -----------------------------
     // Bonuses
     // -----------------------------
@@ -70,6 +75,7 @@ export const readabilityScorer: Scorer<
     const vowelBalanceBonus = hasBalancedVowels ? VOWEL_BALANCE_BONUS : 0;
 
     const hasHighAlphabeticCoverage =
+      hasBalancedVowels &&
       metadata.alphabeticCoverage >= HIGH_ALPHABETIC_COVERAGE;
 
     const alphabeticCoverageBonus = hasHighAlphabeticCoverage
@@ -84,7 +90,8 @@ export const readabilityScorer: Scorer<
       consonantClusterPenalty +
       numberPenalty +
       symbolPenalty +
-      transitionPenalty;
+      transitionPenalty +
+      naturalTransitionPenalty;
 
     const totalBonuses = vowelBalanceBonus + alphabeticCoverageBonus;
 
@@ -122,6 +129,10 @@ export const readabilityScorer: Scorer<
       reasons.push("Contains mixed character transitions");
     }
 
+    if (naturalTransitionPenalty > 0) {
+      reasons.push("Contains uncommon letter sequences");
+    }
+
     return {
       score,
 
@@ -143,7 +154,7 @@ export const readabilityScorer: Scorer<
         },
 
         finalScore: score,
-      },
+      } satisfies ReadabilityScoreMetadata,
     };
   },
 };

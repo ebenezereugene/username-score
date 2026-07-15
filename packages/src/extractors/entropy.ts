@@ -1,8 +1,7 @@
 // extractors/entropy.ts
 
 import type { Extractor } from "./types.js";
-
-type EntropyTier = "low" | "medium" | "high";
+import type { EntropyMetadata, EntropyTier } from "./types.entropy.js";
 
 // Thresholds apply to entropyDensity (entropy normalized against the max
 // possible for the string's length), not raw entropy. Raw entropy's
@@ -30,7 +29,7 @@ const HIGH_TIER_VALUE = 0.3; // random/generated usernames tend to land here
 const MIN_RELIABLE_LENGTH = 8;
 const NEUTRAL_VALUE = MEDIUM_TIER_VALUE; // when unsure, assume "medium"
 
-export const entropyExtractor: Extractor = {
+export const entropyExtractor: Extractor<EntropyMetadata> = {
   name: "entropy",
 
   extract(username) {
@@ -40,7 +39,6 @@ export const entropyExtractor: Extractor = {
     if (length === 0) {
       return {
         name: this.name,
-        value: 0,
         metadata: {
           entropy: 0,
           entropyDensity: 0,
@@ -48,7 +46,7 @@ export const entropyExtractor: Extractor = {
           uniqueCharacterCount: 0,
           uniqueCharacterRatio: 0,
           confidence: 0,
-        },
+        } satisfies EntropyMetadata,
       };
     }
 
@@ -110,8 +108,6 @@ export const entropyExtractor: Extractor = {
     return {
       name: this.name,
 
-      value,
-
       metadata: {
         entropy: Math.round(entropy * 100) / 100,
 
@@ -125,7 +121,7 @@ export const entropyExtractor: Extractor = {
           Math.round((uniqueCharacterCount / length) * 100) / 100,
 
         confidence: Math.round(confidence * 100) / 100,
-      },
+      } satisfies EntropyMetadata,
     };
   },
 };

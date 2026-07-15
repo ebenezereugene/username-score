@@ -1,10 +1,22 @@
 // scorers/length.ts
 
-import type { ParsedUsername } from "../parser/types.js";
-import { IDEAL_MAX, IDEAL_MIN, LENGTH_SCORES, MAX_REASONABLE_LENGTH, REASONS, TAIL_START_LENGTH, VERY_SHORT_LENGTHS } from "./ constants.length.js";
-import type { ScoreResult } from "./types.js";
+import type { Scorer } from "./types.js";
+
+import {
+  IDEAL_MAX,
+  IDEAL_MIN,
+  LENGTH_SCORES,
+  MAX_REASONABLE_LENGTH,
+  REASONS,
+  TAIL_START_LENGTH,
+  VERY_SHORT_LENGTHS,
+} from "./ constants.length.js";
 
 import { clampScore, getScoreTier, type ScoreTier } from "./utils.js";
+
+export interface LengthMetadata {
+  length: number;
+}
 
 export interface LengthScoreMetadata {
   length: number;
@@ -12,7 +24,6 @@ export interface LengthScoreMetadata {
   deviation: number;
   tier: ScoreTier;
 }
-    
 
 function getExplicitScore(length: number): number {
   const score = LENGTH_SCORES[length];
@@ -37,59 +48,65 @@ function tailDecayScore(length: number): number {
   return Math.round(Math.max(0, score));
 }
 
-export function scoreLength(
-  username: ParsedUsername,
-): ScoreResult<LengthScoreMetadata> {
-  const length = username.length;
+export const lengthScorer: Scorer<LengthMetadata, LengthScoreMetadata> = {
+  name: "length",
 
-  const reasons: string[] = [];
+  score(metadata) {
+    const { length } = metadata;
 
-  let deviation = 0;
+    const reasons: string[] = [];
 
-  if (length < IDEAL_MIN) {
-    deviation = IDEAL_MIN - length;
-  } else if (length > IDEAL_MAX) {
-    deviation = length - IDEAL_MAX;
-  }
-
-  const idealRange = deviation === 0;
-
-  let score: number;
-
-  if (length <= 2) {
-    score = 0;
-    reasons.push(REASONS.tooShort);
-  } else if (idealRange) {
-    score = 100;
-    reasons.push(REASONS.ideal, REASONS.memorable);
-  } else if (VERY_SHORT_LENGTHS.has(length)) {
-    score = getExplicitScore(length);
-    reasons.push(REASONS.veryShort);
-  } else if (length in LENGTH_SCORES) {
-    score = getExplicitScore(length);
+    let deviation = 0;
 
     if (length < IDEAL_MIN) {
-      reasons.push(REASONS.short);
-    } else {
-      reasons.push(REASONS.long);
+      deviation = IDEAL_MIN - length;
+    } else if (length > IDEAL_MAX) {
+      deviation = length - IDEAL_MAX;
     }
-  } else {
-    score = tailDecayScore(length);
-    reasons.push(REASONS.tooLong);
-  }
 
-  score = clampScore(score);
+    const idealRange = deviation === 0;
 
-  return {
-    name: "length",
-    score,
-    confidence: 1,
-    reasons,
-    metadata: {
-      length,
-      idealRange,
-      deviation,
-      tier: getScoreTier(score),
-    },
-  };
-}
+    let score: number;
+
+    if (length <= 2) {
+      score = 0;
+
+      reasons.push(REASONS.tooShort);
+    } else if (idealRange) {
+      score = 100;
+
+      reasons.push(REASONS.ideal, REASONS.memorable);
+    } else if (VERY_SHORT_LENGTHS.has(length)) {
+      score = getExplicitScore(length);
+
+      reasons.push(REASONS.veryShort);
+    } else if (length in LENGTH_SCORES) {
+      score = getExplicitScore(length);
+
+      if (length < IDEAL_MIN) {
+        reasons.push(REASONS.short);
+      } else {
+        reasons.push(REASONS.long);
+      }
+    } else {
+      score = tailDecayScore(length);
+
+      reasons.push(REASONS.tooLong);
+    }
+
+    score = clampScore(score);
+
+    return {
+      score,
+      confidence: 1,
+      reasons,
+
+      metadata: {
+        length,
+        idealRange,
+        deviation,
+        tier: getScoreTier(score),
+      },
+    };
+  },
+};

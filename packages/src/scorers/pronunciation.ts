@@ -6,22 +6,47 @@ import type { Scorer } from "./types.js";
 const clamp = (value: number, min = 0, max = 100): number =>
   Math.max(min, Math.min(max, value));
 
+// Ideal vowel ratio band for pronounceable names. Falloff outside the
+// band is proportional (not a hard cliff), so a ratio just outside the
+// band is barely penalized while an extreme ratio is penalized heavily.
+const IDEAL_MIN_VOWEL_RATIO = 0.35;
+const IDEAL_MAX_VOWEL_RATIO = 0.55;
+
 function scoreVowelRatio(vowelRatio: number): number {
-  if (vowelRatio < 0.2) {
-    return clamp(100 - (0.2 - vowelRatio) * 500);
+  if (
+    vowelRatio >= IDEAL_MIN_VOWEL_RATIO &&
+    vowelRatio <= IDEAL_MAX_VOWEL_RATIO
+  ) {
+    return 100;
   }
-  if (vowelRatio > 0.6) {
-    return clamp(100 - (vowelRatio - 0.6) * 300);
+  if (vowelRatio < IDEAL_MIN_VOWEL_RATIO) {
+    return clamp(100 - (IDEAL_MIN_VOWEL_RATIO - vowelRatio) * 400);
   }
-  return 100;
+  return clamp(100 - (vowelRatio - IDEAL_MAX_VOWEL_RATIO) * 300);
 }
 
+// Quadratic instead of linear: a run of 4 is mildly annoying, a run of
+// 6+ is essentially unpronounceable and should approach 0, not linger
+// in the 25-50 range.
 function scoreConsonantRuns(longestConsonantRun: number): number {
-  return clamp(100 - Math.max(0, longestConsonantRun - 3) * 25);
+  const excess = Math.max(0, longestConsonantRun - 3);
+  return clamp(100 - excess * excess * 10);
 }
 
+// IMPOSSIBLE_TRANSITIONS is a small curated set of exotic pairs (qx, zx,
+// jk, etc.) — it will never catch every unpronounceable pair, so it's
+// kept as a low-weight signal rather than a primary one.
 function scoreImpossibleTransitions(count: number): number {
   return clamp(100 - count * 40);
+}
+
+// commonTransitionScore (0-1) reflects the proportion of letter pairs
+// that are phonetically common or natural. Unlike the impossible-pairs
+// blocklist, this generalizes to unseen bad pairs — a string full of
+// pairs like "tw", "hh", "gt" scores low here even though none of
+// those pairs are individually blocklisted.
+function scoreCommonTransitions(commonTransitionScore: number): number {
+  return clamp(commonTransitionScore * 100);
 }
 
 function scoreNumbersCount(numbersCount: number): number {
@@ -40,12 +65,13 @@ function scoreSeparators(separatorDensity: number): number {
 }
 
 const WEIGHTS = {
-  vowelRatio: 0.2,
-  consonantRuns: 0.25,
-  impossibleTransitions: 0.25,
+  vowelRatio: 0.15,
+  consonantRuns: 0.3,
+  commonTransitions: 0.2,
+  impossibleTransitions: 0.1,
   numbersCount: 0.05,
   numberInterruptions: 0.1,
-  separators: 0.15,
+  separators: 0.1,
 } as const;
 
 export const pronunciationScorer: Scorer<PronunciationMetadata> = {
@@ -55,6 +81,8 @@ export const pronunciationScorer: Scorer<PronunciationMetadata> = {
     const weighted =
       scoreVowelRatio(metadata.vowelRatio) * WEIGHTS.vowelRatio +
       scoreConsonantRuns(metadata.longestConsonantRun) * WEIGHTS.consonantRuns +
+      scoreCommonTransitions(metadata.commonTransitionScore) *
+        WEIGHTS.commonTransitions +
       scoreImpossibleTransitions(metadata.impossibleTransitions) *
         WEIGHTS.impossibleTransitions +
       scoreNumbersCount(metadata.numbersCount) * WEIGHTS.numbersCount +
