@@ -9,10 +9,13 @@ export const GREETING_PREFIXES = [
   "im",
   "hey",
   "hello",
+  "hi",
   "its",
   "meet",
   "the",
   "thisis",
+  "callme",
+  "yo",
 ];
 
 /**
@@ -25,18 +28,30 @@ export const CREATOR_SUFFIXES = [
   "designs",
   "makes",
   "works",
+  "crafts",
+  "writes",
+  "draws",
   "studio",
   "labs",
   "hq",
   "co",
   "media",
   "digital",
+  "collective",
+  "workshop",
 ];
 
 /**
  * Creator-oriented prefixes.
  */
-export const CREATOR_PREFIXES = ["build", "madeby", "designby", "createdby"];
+export const CREATOR_PREFIXES = [
+  "build",
+  "madeby",
+  "designby",
+  "createdby",
+  "by",
+  "from",
+];
 
 /**
  * Domain-style words.
@@ -48,47 +63,57 @@ export const CREATOR_DOMAINS = [
   "dev",
   "made",
   "studio",
+  "craft",
+  "form",
+  "lab",
 ];
 
 /**
  * Minimal additions.
  */
-export const MINIMAL_PREFIXES = ["the", "its"];
+export const MINIMAL_PREFIXES = ["the", "its", "mr", "ms"];
 
-export const MINIMAL_SUFFIXES = ["_", ".", "x"];
+export const MINIMAL_SUFFIXES = ["_", ".", "x", "hq"];
 
 /**
  * Friendly words.
  */
-export const FRIENDLY_PREFIXES = ["real", "just", "official", "simply"];
+export const FRIENDLY_PREFIXES = [
+  "real",
+  "just",
+  "official",
+  "simply",
+  "truly",
+  "always",
+];
 
 /**
  * Small curated adjective list for alliterative usernames.
  */
 export const ADJECTIVES_BY_LETTER: Record<string, string[]> = {
-  a: ["ace", "apt", "avid"],
-  b: ["bold", "bright", "brave"],
-  c: ["cool", "clever", "crisp"],
-  d: ["daring", "deft", "dapper"],
-  e: ["epic", "elite", "eager"],
-  f: ["fresh", "fierce", "fast"],
-  g: ["grand", "great", "golden"],
-  h: ["happy", "honest", "handy"],
-  i: ["ideal", "iconic"],
+  a: ["ace", "apt", "avid", "artsy"],
+  b: ["bold", "bright", "brave", "brisk"],
+  c: ["cool", "clever", "crisp", "candid"],
+  d: ["daring", "deft", "dapper", "driven"],
+  e: ["epic", "elite", "eager", "earnest"],
+  f: ["fresh", "fierce", "fast", "fluent"],
+  g: ["grand", "great", "golden", "genuine"],
+  h: ["happy", "honest", "handy", "humble"],
+  i: ["ideal", "iconic", "inspired"],
   j: ["jolly", "joyful", "jazzy"],
-  k: ["keen", "kind"],
-  l: ["lively", "lucky", "loyal"],
-  m: ["mighty", "modern", "merry"],
-  n: ["neat", "noble", "nimble"],
-  o: ["original", "open"],
-  p: ["prime", "pure", "plucky"],
+  k: ["keen", "kind", "keenwit"],
+  l: ["lively", "lucky", "loyal", "lucid"],
+  m: ["mighty", "modern", "merry", "mindful"],
+  n: ["neat", "noble", "nimble", "novel"],
+  o: ["original", "open", "optimal"],
+  p: ["prime", "pure", "plucky", "polished"],
   q: ["quick", "quiet", "quirky"],
-  r: ["real", "rapid", "radiant"],
-  s: ["sharp", "swift", "smart"],
-  t: ["true", "tidy", "tenacious"],
-  u: ["ultra", "unique"],
-  v: ["vivid", "vital", "vibrant"],
-  w: ["wise", "wild", "witty"],
+  r: ["real", "rapid", "radiant", "rooted"],
+  s: ["sharp", "swift", "smart", "steady"],
+  t: ["true", "tidy", "tenacious", "thoughtful"],
+  u: ["ultra", "unique", "upbeat"],
+  v: ["vivid", "vital", "vibrant", "versatile"],
+  w: ["wise", "wild", "witty", "warm"],
   x: ["xtra"],
   y: ["young", "youthful"],
   z: ["zesty", "zen", "zippy"],
@@ -110,13 +135,41 @@ export const LEET_ENCODE_MAP: Record<string, string> = {
 /**
  * Common separators.
  */
-export const SEPARATORS = [".", "_"];
+export const SEPARATORS = [".", "_", "-"];
 
 /**
  * Mutation suffixes.
  * Used for simple stylistic variations.
  */
-export const MUTATION_SUFFIXES = ["x", "xo", "tv", "io"];
+export const MUTATION_SUFFIXES = [
+  "x",
+  "xo",
+  "tv",
+  "io",
+  "hq",
+  "app",
+  "world",
+  "space",
+];
+
+/**
+ * Number-as-word suffixes. A tasteful alternative to random digits —
+ * "jimohone" reads as a name, "jimoh38291" doesn't.
+ */
+export const NUMBER_WORD_SUFFIXES = ["one", "prime", "zero", "x2"];
+
+/**
+ * Short standalone words that pair naturally as suffixes across most
+ * names, for extra variety beyond the creator/mutation banks.
+ */
+export const VIBE_SUFFIXES = [
+  "official",
+  "world",
+  "space",
+  "club",
+  "circle",
+  "corner",
+];
 
 /**
  * Maximum candidates generated per strategy.

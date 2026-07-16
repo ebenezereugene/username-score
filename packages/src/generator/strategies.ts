@@ -11,7 +11,9 @@ import {
   MINIMAL_PREFIXES,
   MINIMAL_SUFFIXES,
   MUTATION_SUFFIXES,
+  NUMBER_WORD_SUFFIXES,
   SEPARATORS,
+  VIBE_SUFFIXES,
 } from "./wordbanks.js";
 
 /**
@@ -101,12 +103,14 @@ export function generateLeetspeak(name: string): string[] {
  *
  * jimoh
  * ↓
- * jimohx
- * jimohtv
- * jimohio
+ * jimohx, jimohtv, jimohio, jimohone, jimohworld
  */
 export function mutateUsername(name: string): string[] {
-  return MUTATION_SUFFIXES.map((suffix) => `${name}${suffix}`);
+  return [
+    ...MUTATION_SUFFIXES.map((suffix) => `${name}${suffix}`),
+    ...NUMBER_WORD_SUFFIXES.map((suffix) => `${name}${suffix}`),
+    ...VIBE_SUFFIXES.map((suffix) => `${name}${suffix}`),
+  ];
 }
 
 /**
