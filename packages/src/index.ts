@@ -96,9 +96,9 @@ export function score(username: string, options: ScoreOptions = {}): number {
 export { generateUsernameSuggestions };
 export type { UsernameSuggestion, SuggestionOptions };
 
-
-const username= analyze("jimoh");
-
-
+const username = analyze("eugeneebenezer", {
+  includeSuggestions: true,
+  suggestionOptions: {  randomize: true, poolSize: 5, limit: 7 },
+});
 
 console.log("username", username);

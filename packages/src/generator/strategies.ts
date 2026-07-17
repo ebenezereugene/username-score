@@ -195,3 +195,49 @@ export function generateAllCandidates(name: string): string[] {
 
   return [...candidates];
 }
+
+
+
+/**
+ * Cross-strategy combinations — pairs a prefix (greeting/friendly/minimal)
+ * with a transformed version of the name (leetspeak, separator-split, or
+ * suffixed) instead of the plain name. This is what produces shapes like
+ * "itzeugeneprime", "real3ugene", "the.eugene", "heyeug.ene" — patterns
+ * no single existing strategy reaches on its own.
+ */
+export function generateHybrid(name: string): string[] {
+  const candidates = new Set<string>();
+
+  const prefixes = [
+    ...GREETING_PREFIXES,
+    ...FRIENDLY_PREFIXES,
+    ...MINIMAL_PREFIXES,
+  ];
+
+  const leetVariants = generateLeetspeak(name);
+  const suffixes = [...CREATOR_SUFFIXES, ...NUMBER_WORD_SUFFIXES];
+
+  const mid = name.length >= 3 ? Math.ceil(name.length / 2) : null;
+
+  prefixes.forEach((prefix, i) => {
+    // prefix + leetspeak variant, e.g. "real3ugene"
+    if (leetVariants.length > 0) {
+      candidates.add(`${prefix}${leetVariants[i % leetVariants.length]}`);
+    }
+
+    // prefix + name + suffix, e.g. "itzeugeneprime"
+    candidates.add(`${prefix}${name}${suffixes[i % suffixes.length]}`);
+
+    // prefix + separator + name, e.g. "the.eugene"
+    candidates.add(`${prefix}${SEPARATORS[i % SEPARATORS.length]}${name}`);
+
+    // prefix + mid-word split, e.g. "heyeug.ene"
+    if (mid) {
+      candidates.add(
+        `${prefix}${name.slice(0, mid)}${SEPARATORS[i % SEPARATORS.length]}${name.slice(mid)}`,
+      );
+    }
+  });
+
+  return [...candidates];
+}

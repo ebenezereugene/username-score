@@ -7,6 +7,7 @@ import { combinePillars } from "../engine/pillars.js";
 import {
   generateConversational,
   generateCreator,
+  generateHybrid,
   generateLeetspeak,
   generateMinimalist,
   generatePlayful,
@@ -14,11 +15,22 @@ import {
   repairUsername,
 } from "./strategies.js";
 
+export type SuggestionStrategy =
+  | "original"
+  | "repair"
+  | "conversation"
+  | "creator"
+  | "minimalist"
+  | "playful"
+  | "leetspeak"
+  | "mutation"
+  | "hybrid";
+
 export interface UsernameSuggestion {
   username: string;
   score: number;
   breakdown: ReturnType<typeof combinePillars>;
-  strategy: string;
+  strategy: SuggestionStrategy;
 }
 
 export interface SuggestionOptions {
@@ -56,14 +68,19 @@ export interface SuggestionOptions {
    * @default 3
    */
   poolSize?: number;
+
+  /**
+   * Restrict generation to specific strategies. When omitted, all
+   * strategies run. Strategies not listed here are skipped entirely
+   * (not generated, not scored) rather than filtered out afterward.
+   */
+  strategies?: SuggestionStrategy[];
 }
 
-interface StrategyResult {
-  strategy: string;
-  candidates: string[];
-}
-
-function scoreCandidate(candidate: string): UsernameSuggestion {
+function scoreCandidate(
+  candidate: string,
+  strategy: SuggestionStrategy,
+): UsernameSuggestion {
   const parsed = parseUsername(candidate);
   const scorerResults = scoreUsername(parsed);
   const breakdown = combinePillars(scorerResults);
@@ -72,7 +89,7 @@ function scoreCandidate(candidate: string): UsernameSuggestion {
     username: candidate,
     score: breakdown.total,
     breakdown,
-    strategy: "",
+    strategy,
   };
 }
 
@@ -81,7 +98,7 @@ function scoreCandidate(candidate: string): UsernameSuggestion {
  * best-first, deduplicated and length-filtered.
  */
 function rankStrategy(
-  strategy: string,
+  strategy: SuggestionStrategy,
   candidates: string[],
 ): UsernameSuggestion[] {
   const seen = new Set<string>();
@@ -95,9 +112,7 @@ function rankStrategy(
 
     if (normalized.length < 2) continue;
 
-    const result = scoreCandidate(normalized);
-    result.strategy = strategy;
-    scored.push(result);
+    scored.push(scoreCandidate(normalized, strategy));
   }
 
   return scored.sort((a, b) => b.score - a.score);
@@ -124,6 +139,7 @@ function pickFromStrategy(
 
   return pool[index] ?? null;
 }
+
 /**
  * Generate username suggestions.
  *
@@ -142,6 +158,7 @@ export function generateUsernameSuggestions(
     minimumScore = 0,
     randomize = false,
     poolSize = 3,
+    strategies: requestedStrategies,
   } = options;
 
   const normalized = username
@@ -153,46 +170,33 @@ export function generateUsernameSuggestions(
     return [];
   }
 
-  const strategies: StrategyResult[] = [
-    {
-      strategy: "original",
-      candidates: includeOriginal ? [normalized] : [],
-    },
-    {
-      strategy: "repair",
-      candidates: repairUsername(normalized),
-    },
-    {
-      strategy: "conversation",
-      candidates: generateConversational(normalized),
-    },
-    {
-      strategy: "creator",
-      candidates: generateCreator(normalized),
-    },
-    {
-      strategy: "minimalist",
-      candidates: generateMinimalist(normalized),
-    },
-    {
-      strategy: "playful",
-      candidates: generatePlayful(normalized),
-    },
-    {
-      strategy: "leetspeak",
-      candidates: generateLeetspeak(normalized),
-    },
-    {
-      strategy: "mutation",
-      candidates: mutateUsername(normalized),
-    },
-  ];
+  // Lazy builders — candidates are only generated for strategies that
+  // actually get used, so filtering by `strategies` skips real work
+  // rather than just discarding results afterward.
+  const strategyBuilders: Record<SuggestionStrategy, () => string[]> = {
+    original: () => (includeOriginal ? [normalized] : []),
+    repair: () => repairUsername(normalized),
+    conversation: () => generateConversational(normalized),
+    creator: () => generateCreator(normalized),
+    minimalist: () => generateMinimalist(normalized),
+    playful: () => generatePlayful(normalized),
+    leetspeak: () => generateLeetspeak(normalized),
+    mutation: () => mutateUsername(normalized),
+    hybrid: () => generateHybrid(normalized),
+  };
+
+  const activeStrategies = (
+    requestedStrategies && requestedStrategies.length > 0
+      ? requestedStrategies
+      : (Object.keys(strategyBuilders) as SuggestionStrategy[])
+  ).filter((strategy) => strategy in strategyBuilders);
 
   const suggestions: UsernameSuggestion[] = [];
   const seen = new Set<string>();
 
-  for (const strategy of strategies) {
-    const ranked = rankStrategy(strategy.strategy, strategy.candidates);
+  for (const strategy of activeStrategies) {
+    const candidates = strategyBuilders[strategy]();
+    const ranked = rankStrategy(strategy, candidates);
     const picked = pickFromStrategy(ranked, randomize, poolSize);
 
     if (!picked) continue;
@@ -207,6 +211,3 @@ export function generateUsernameSuggestions(
 
   return suggestions.slice(0, limit);
 }
-
-
-
