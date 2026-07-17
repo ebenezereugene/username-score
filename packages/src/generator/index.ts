@@ -39,6 +39,23 @@ export interface SuggestionOptions {
    * @default 0
    */
   minimumScore?: number;
+
+  /**
+   * When true, randomly selects among each strategy's top-scoring
+   * candidates instead of always returning the single best one —
+   * so repeated calls for the same name can surface different
+   * (still high-quality) suggestions. Off by default so results
+   * stay deterministic and test-friendly.
+   * @default false
+   */
+  randomize?: boolean;
+
+  /**
+   * How many top-scoring candidates per strategy are eligible for
+   * random selection when randomize is true. Ignored otherwise.
+   * @default 3
+   */
+  poolSize?: number;
 }
 
 interface StrategyResult {
@@ -59,47 +76,73 @@ function scoreCandidate(candidate: string): UsernameSuggestion {
   };
 }
 
-function bestFromStrategy(
+/**
+ * Scores every candidate in a strategy and returns them sorted
+ * best-first, deduplicated and length-filtered.
+ */
+function rankStrategy(
   strategy: string,
   candidates: string[],
-): UsernameSuggestion | null {
-  let best: UsernameSuggestion | null = null;
-
+): UsernameSuggestion[] {
   const seen = new Set<string>();
+  const scored: UsernameSuggestion[] = [];
 
   for (const candidate of candidates) {
     const normalized = candidate.toLowerCase();
 
     if (seen.has(normalized)) continue;
-
     seen.add(normalized);
 
     if (normalized.length < 2) continue;
 
-    const scored = scoreCandidate(normalized);
-
-    scored.strategy = strategy;
-
-    if (!best || scored.score > best.score) {
-      best = scored;
-    }
+    const result = scoreCandidate(normalized);
+    result.strategy = strategy;
+    scored.push(result);
   }
 
-  return best;
+  return scored.sort((a, b) => b.score - a.score);
 }
 
+/**
+ * Picks one suggestion from a ranked strategy list — either the
+ * single best (deterministic), or a random pick among the top
+ * `poolSize` candidates (when randomize is true).
+ */
+function pickFromStrategy(
+  ranked: UsernameSuggestion[],
+  randomize: boolean,
+  poolSize: number,
+): UsernameSuggestion | null {
+  if (ranked.length === 0) return null;
+
+  if (!randomize) {
+    return ranked[0] ?? null;
+  }
+
+  const pool = ranked.slice(0, Math.max(1, poolSize));
+  const index = Math.floor(Math.random() * pool.length);
+
+  return pool[index] ?? null;
+}
 /**
  * Generate username suggestions.
  *
  * Instead of allowing one strategy to dominate the results,
- * each strategy first selects its strongest candidate before
+ * each strategy first selects its strongest candidate (or, with
+ * randomize enabled, a random top-scoring candidate) before
  * entering the final ranking.
  */
 export function generateUsernameSuggestions(
   username: string,
   options: SuggestionOptions = {},
 ): UsernameSuggestion[] {
-  const { limit = 10, includeOriginal = true, minimumScore = 0 } = options;
+  const {
+    limit = 10,
+    includeOriginal = true,
+    minimumScore = 0,
+    randomize = false,
+    poolSize = 3,
+  } = options;
 
   const normalized = username
     .trim()
@@ -149,20 +192,21 @@ export function generateUsernameSuggestions(
   const seen = new Set<string>();
 
   for (const strategy of strategies) {
-    const best = bestFromStrategy(strategy.strategy, strategy.candidates);
+    const ranked = rankStrategy(strategy.strategy, strategy.candidates);
+    const picked = pickFromStrategy(ranked, randomize, poolSize);
 
-    if (!best) continue;
+    if (!picked) continue;
+    if (picked.score < minimumScore) continue;
+    if (seen.has(picked.username)) continue;
 
-    if (best.score < minimumScore) continue;
-
-    if (seen.has(best.username)) continue;
-
-    seen.add(best.username);
-
-    suggestions.push(best);
+    seen.add(picked.username);
+    suggestions.push(picked);
   }
 
   suggestions.sort((a, b) => b.score - a.score);
 
   return suggestions.slice(0, limit);
 }
+
+
+

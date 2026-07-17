@@ -3,15 +3,15 @@
 import { parseUsername } from "./parser/parser.js";
 import { scoreUsername } from "./pipeline/scoreUsername.js";
 import { combinePillars } from "./engine/pillars.js";
-import {
-  generateUsernameSuggestions,
-  type SuggestionOptions,
-  type UsernameSuggestion,
-} from "./generator/index.js";
+import { generateUsernameSuggestions } from "./generator/index.js";
 
 import type { ParsedUsername } from "./parser/types.js";
 import type { PillarBreakdown } from "./engine/pillars.js";
 import type { ScorerResult } from "./engine/types.js";
+import type {
+  UsernameSuggestion,
+  SuggestionOptions,
+} from "./generator/index.js";
 
 export interface ScoreOptions {
   /**
@@ -30,7 +30,8 @@ export interface ScoreOptions {
 
   /**
    * Options forwarded to generateUsernameSuggestions when
-   * includeSuggestions is true.
+   * includeSuggestions is true. Supports randomize/poolSize for
+   * varied suggestions across repeated calls.
    */
   suggestionOptions?: SuggestionOptions;
 }
@@ -93,25 +94,11 @@ export function score(username: string, options: ScoreOptions = {}): number {
 }
 
 export { generateUsernameSuggestions };
-export type {
-  UsernameSuggestion,
-  SuggestionOptions,
-} from "./generator/index.js";
-
-const suggestionsOmmitted =
-analyze("jimoh");
-// { total, pillars, parsed, features }  — suggestions omitted, fast
-
-const suggestionsIncluded =
-analyze("jimoh", { includeSuggestions: true });
-// { total, pillars, parsed, features, suggestions: [...] }
-
-const suggestionsFiltered =
-analyze("jimoh", {
-  includeSuggestions: true,
-  suggestionOptions: { limit: 3, minimumScore: 60 },
-});
-// same, but capped/filtered per your existing SuggestionOptions
+export type { UsernameSuggestion, SuggestionOptions };
 
 
-console.log("results", suggestionsFiltered)
+const username= analyze("jimoh");
+
+
+
+console.log("username", username);
